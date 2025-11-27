@@ -1,0 +1,33 @@
+@using PrimePro.Services
+@inject AuthState AuthState
+
+<nav class="nav flex-column">
+ <NavLink class="nav-link" href="/">Home</NavLink>
+ <NavLink class="nav-link" href="/counter">Counter</NavLink>
+ <NavLink class="nav-link" href="/weather">Weather</NavLink>
+
+ @if (!AuthState.IsAuthenticated)
+ {
+ <NavLink class="nav-link" href="/login">Login</NavLink>
+ }
+ else
+ {
+ <NavLink class="nav-link" href="/test/privado">Test Privado</NavLink>
+ <NavLink class="nav-link" href="/logout">Cerrar Sesión</NavLink>
+ }
+</nav>
+
+@code {
+ protected override async Task OnInitializedAsync()
+ {
+ // Suscribirse a cambios de estado para refrescar el menú
+ AuthState.OnChange += StateHasChanged;
+ await AuthState.UpdateAsync();
+ StateHasChanged();
+ }
+
+ public void Dispose()
+ {
+ AuthState.OnChange -= StateHasChanged;
+ }
+}

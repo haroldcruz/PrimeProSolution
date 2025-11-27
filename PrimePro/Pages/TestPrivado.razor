@@ -1,0 +1,49 @@
+@page "/test/privado"
+@using System.Net
+@inject IHttpClientFactory HttpClientFactory
+
+<h3>Test Privado</h3>
+
+@if (loading)
+{
+ <p>Cargando...</p>
+}
+else if (!string.IsNullOrEmpty(message))
+{
+ <p>@message</p>
+}
+
+@code {
+ private bool loading = true;
+ private string? message;
+
+ protected override async Task OnInitializedAsync()
+ {
+ loading = true;
+ try
+ {
+ var client = HttpClientFactory.CreateClient("ApiClient");
+ var response = await client.GetAsync("api/test/privado");
+ if (response.IsSuccessStatusCode)
+ {
+ message = await response.Content.ReadAsStringAsync();
+ }
+ else if (response.StatusCode == HttpStatusCode.Unauthorized)
+ {
+ message = "No autorizado";
+ }
+ else
+ {
+ message = $"Error: {response.StatusCode}";
+ }
+ }
+ catch (Exception ex)
+ {
+ message = "No autorizado"; // Simplified: treat exceptions as unauthorized for UI
+ }
+ finally
+ {
+ loading = false;
+ }
+ }
+}

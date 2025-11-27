@@ -1,0 +1,53 @@
+@page "/login"
+@inject PrimePro.Services.AuthService AuthService
+@inject PrimePro.Services.TokenStorageService TokenStorage
+@inject PrimePro.Services.AuthState AuthState
+@inject NavigationManager Navigation
+
+<h3>Iniciar sesión</h3>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+ <div class="alert alert-danger">@errorMessage</div>
+}
+
+<EditForm Model="loginModel" OnValidSubmit="HandleLogin">
+ <DataAnnotationsValidator />
+ <ValidationSummary />
+ <div class="mb-3">
+ <label class="form-label">Email</label>
+ <InputText class="form-control" @bind-Value="loginModel.Email" />
+ </div>
+ <div class="mb-3">
+ <label class="form-label">Contraseña</label>
+ <InputText class="form-control" @bind-Value="loginModel.Contraseña" type="password" />
+ </div>
+ <button class="btn btn-primary" type="submit">Entrar</button>
+</EditForm>
+
+@code {
+ private LoginModel loginModel = new();
+ private string? errorMessage;
+
+ private async Task HandleLogin()
+ {
+ errorMessage = null;
+ // AuthService.Login posts to POST api/auth/login using the named ApiClient
+ var token = await AuthService.Login(loginModel.Email, loginModel.Contraseña);
+ if (string.IsNullOrEmpty(token))
+ {
+ errorMessage = "Credenciales incorrectas";
+ return;
+ }
+
+ await TokenStorage.SaveTokenAsync(token);
+ await AuthState.UpdateAsync();
+ Navigation.NavigateTo("/");
+ }
+
+ private class LoginModel
+ {
+ public string Email { get; set; } = string.Empty;
+ public string Contraseña { get; set; } = string.Empty;
+ }
+}
