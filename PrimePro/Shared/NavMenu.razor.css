@@ -1,0 +1,80 @@
+:root {
+ --sidebar-bg: #212529;
+ --sidebar-color: #d7d7d7;
+ --sidebar-accent: rgba(255, 255, 255, 0.12);
+}
+
+/* Sidebar container adjustments */
+.nav-scrollable {
+ background: var(--sidebar-bg);
+ color: var(--sidebar-color);
+ padding-bottom: 1rem;
+}
+
+.top-row {
+ height: 3.5rem;
+ display: flex;
+ align-items: center;
+ background: var(--sidebar-bg);
+ color: var(--sidebar-color);
+}
+
+.navbar-brand {
+ font-size: 1.1rem;
+ color: var(--sidebar-color);
+ text-decoration: none;
+}
+
+/* icon/emoji */
+.nav-icon { 
+ display: inline-block; 
+ width: 1.25rem; 
+ text-align: center; 
+ margin-right: 0.75rem; 
+}
+
+/* Nav items */
+.nav-item {
+ font-size: 0.95rem;
+ padding: 0.25rem 0.75rem;
+}
+
+.nav-item:first-of-type { padding-top: 1rem; }
+.nav-item:last-of-type { padding-bottom: 1rem; }
+
+/* Link styles - use block so entire row is clickable */
+.nav-item ::deep a {
+ color: var(--sidebar-color);
+ display: block;
+ padding: 0.5rem 0.5rem;
+ border-radius: 6px;
+ text-decoration: none;
+}
+
+.nav-item ::deep a:hover {
+ background: var(--sidebar-accent);
+ color: #fff;
+}
+
+.nav-item ::deep a.active {
+ background: rgba(255, 255, 255, 0.18);
+ color: #fff;
+}
+
+/* Responsive behaviour: hide sidebar content on small screens when collapsed */
+.collapse {
+ display: none;
+}
+
+@media (min-width: 768px) {
+ .collapse {
+ display: block;
+ }
+ .navbar-toggler {
+ display: none;
+ }
+ .nav-scrollable {
+ height: calc(100vh - 3.5rem);
+ overflow-y: auto;
+ }
+}

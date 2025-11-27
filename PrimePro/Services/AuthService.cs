@@ -12,7 +12,7 @@ namespace PrimePro.Services
 
  public AuthService(IHttpClientFactory httpFactory)
  {
- // Use named client "ApiClient" so AuthMessageHandler attaches token.
+ // Use named client "ApiClient" so AuthMessageHandler attaches token when available.
  _http = httpFactory.CreateClient("ApiClient");
  }
 
@@ -28,7 +28,8 @@ namespace PrimePro.Services
  ["contraseña"] = password
  };
 
- var response = await _http.PostAsJsonAsync("api/auth/login", payload);
+ // Usar URL absoluta para evitar que el navegador envíe la petición al host del cliente.
+ var response = await _http.PostAsJsonAsync("https://localhost:7162/api/auth/login", payload);
  if (!response.IsSuccessStatusCode) return null;
  var content = await response.Content.ReadFromJsonAsync<LoginResponse>();
  return content?.Token;
@@ -47,7 +48,7 @@ namespace PrimePro.Services
  ["contraseña"] = password
  };
 
- var response = await _http.PostAsJsonAsync("api/auth/register", payload);
+ var response = await _http.PostAsJsonAsync("https://localhost:7162/api/auth/register", payload);
  return response.IsSuccessStatusCode;
  }
 

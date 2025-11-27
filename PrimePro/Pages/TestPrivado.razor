@@ -10,12 +10,13 @@
 }
 else if (!string.IsNullOrEmpty(message))
 {
- <p>@message</p>
+ <pre>@message</pre>
 }
 
 @code {
  private bool loading = true;
  private string? message;
+ private const string ApiUrl = "https://localhost:7162/api/test/privado";
 
  protected override async Task OnInitializedAsync()
  {
@@ -23,10 +24,21 @@ else if (!string.IsNullOrEmpty(message))
  try
  {
  var client = HttpClientFactory.CreateClient("ApiClient");
- var response = await client.GetAsync("api/test/privado");
+ // Use absolute URL to ensure the request goes to the API host, not the WASM host
+ var response = await client.GetAsync(ApiUrl);
+ var content = await response.Content.ReadAsStringAsync();
+
  if (response.IsSuccessStatusCode)
  {
- message = await response.Content.ReadAsStringAsync();
+ // If the API accidentally returned HTML (index.html), detect and show helpful message
+ if (response.Content.Headers.ContentType != null && response.Content.Headers.ContentType.MediaType == "text/html")
+ {
+ message = "La respuesta contiene HTML. Verifica que la petición vaya al host de la API (puerto7162) y que CORS esté configurado." + "\n\n" + content;
+ }
+ else
+ {
+ message = content;
+ }
  }
  else if (response.StatusCode == HttpStatusCode.Unauthorized)
  {
@@ -34,12 +46,13 @@ else if (!string.IsNullOrEmpty(message))
  }
  else
  {
- message = $"Error: {response.StatusCode}";
+ message = $"Error HTTP {(int)response.StatusCode} ({response.StatusCode}): {content}";
  }
  }
  catch (Exception ex)
  {
- message = "No autorizado"; // Simplified: treat exceptions as unauthorized for UI
+ // Mostrar excepción para depuración del cliente
+ message = $"Exception: {ex.Message}\n{ex.GetType().FullName}";
  }
  finally
  {

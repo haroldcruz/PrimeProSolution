@@ -8,6 +8,7 @@ using System.Security.Claims;
 using PrimePro.Api.Data;
 using PrimePro.Api.Models;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Authorization;
 
 namespace PrimePro.Api.Controllers
 {
@@ -41,15 +42,55 @@ namespace PrimePro.Api.Controllers
  public string Contraseña { get; set; } = string.Empty;
  }
 
+ private void AddCorsHeaders()
+ {
+ var origin = Request.Headers["Origin"].ToString();
+ if (!string.IsNullOrWhiteSpace(origin))
+ {
+ Response.Headers["Access-Control-Allow-Origin"] = origin;
+ }
+ else
+ {
+ Response.Headers["Access-Control-Allow-Origin"] = "*";
+ }
+ Response.Headers["Access-Control-Allow-Credentials"] = "true";
+ }
+
+ /// <summary>
+ /// Maneja preflight CORS para cualquier ruta bajo /api/auth.
+ /// Esto agrega los encabezados necesarios para que los navegadores permitan las solicitudes desde el cliente de desarrollo.
+ /// </summary>
+ [HttpOptions("{*any}")]
+ [AllowAnonymous]
+ public IActionResult Options()
+ {
+ // Permitir el origen que hizo la petición si está presente; de lo contrario permitir cualquier origen.
+ var origin = Request.Headers["Origin"].ToString();
+ if (!string.IsNullOrWhiteSpace(origin))
+ {
+ Response.Headers["Access-Control-Allow-Origin"] = origin;
+ }
+ else
+ {
+ Response.Headers["Access-Control-Allow-Origin"] = "*";
+ }
+
+ Response.Headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,DELETE,OPTIONS";
+ Response.Headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization";
+ Response.Headers["Access-Control-Allow-Credentials"] = "true";
+ Response.Headers["Access-Control-Max-Age"] = "86400"; //1 day
+
+ return NoContent();
+ }
+
  /// <summary>
  /// Autentica un usuario y devuelve un token JWT.
- /// Explicit absolute route and Consumes to ensure POST requests to /api/auth/login are handled.
  /// </summary>
  [HttpPost("login")]
- [HttpPost("/api/auth/login")]
  [Consumes("application/json")]
  public async Task<IActionResult> Login([FromBody] LoginRequest request)
  {
+ AddCorsHeaders();
  _logger.LogInformation("Login attempt for {Email}", request.Email);
  var user = await _db.Usuarios.FirstOrDefaultAsync(u => u.Email == request.Email);
  if (user == null)
@@ -76,10 +117,10 @@ namespace PrimePro.Api.Controllers
  /// Recibe { nombre, email, contraseña }. Calcula SHA256, evita duplicados por email y guarda Usuario.
  /// </summary>
  [HttpPost("register")]
- [HttpPost("/api/auth/register")]
  [Consumes("application/json")]
  public async Task<IActionResult> Register([FromBody] RegisterRequest request)
  {
+ AddCorsHeaders();
  if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Contraseña) || string.IsNullOrWhiteSpace(request.Nombre))
  {
  return BadRequest(new { error = "Nombre, email y contraseña son requeridos." });
@@ -117,9 +158,9 @@ namespace PrimePro.Api.Controllers
  /// Crea usuario "harold@test.com" con contraseña "MiPass123!" si no existe.
  /// </summary>
  [HttpPost("seed")]
- [HttpPost("/api/auth/seed")]
  public async Task<IActionResult> Seed()
  {
+ AddCorsHeaders();
  if (!_env.IsDevelopment())
  {
  return Forbid();

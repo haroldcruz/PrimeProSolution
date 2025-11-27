@@ -49,6 +49,18 @@ builder.Services.AddAuthentication(options =>
 // Register authorization
 builder.Services.AddAuthorization();
 
+// Add CORS policy for local development (Blazor WASM running on https://localhost:7067)
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("DevCors", policy =>
+    {
+        policy.WithOrigins("https://localhost:7067")
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials();
+    });
+});
+
 var app = builder.Build();
 
 // Enable Swagger middleware (enabled unconditionally so /swagger is available regardless of environment)
@@ -58,6 +70,9 @@ app.UseSwaggerUI();
 // Ensure authentication runs before authorization
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Use CORS early in the pipeline
+app.UseCors("DevCors");
 
 app.MapControllers();
 

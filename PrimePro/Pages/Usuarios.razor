@@ -1,0 +1,227 @@
+@page "/usuarios"
+@using System.Net
+@using System.Net.Http.Json
+@inject IHttpClientFactory HttpClientFactory
+@inject IJSRuntime JS
+
+<h3>Usuarios</h3>
+
+@if (loading)
+{
+ <p>Cargando...</p>
+}
+else
+{
+ <div class="mb-3">
+ <button class="btn btn-primary" @onclick="ShowCreate">Nuevo usuario</button>
+ </div>
+
+ @if (!string.IsNullOrEmpty(errorMessage))
+ {
+ <div class="alert alert-danger">@errorMessage</div>
+ }
+
+ <table class="table table-striped">
+ <thead>
+ <tr>
+ <th>Id</th>
+ <th>Nombre</th>
+ <th>Email</th>
+ <th></th>
+ </tr>
+ </thead>
+ <tbody>
+ @foreach (var u in usuarios)
+ {
+ <tr>
+ <td>@u.Id</td>
+ <td>@u.Nombre</td>
+ <td>@u.Email</td>
+ <td>
+ <button class="btn btn-sm btn-secondary me-2" @onclick="() => Edit(u.Id)">Editar</button>
+ <button class="btn btn-sm btn-danger" @onclick="() => Delete(u.Id)">Borrar</button>
+ </td>
+ </tr>
+ }
+ </tbody>
+ </table>
+}
+
+@if (showForm)
+{
+ <div class="card">
+ <div class="card-body">
+ <h5 class="card-title">@((editingId ==0) ? "Crear usuario" : $"Editar usuario {editingId}")</h5>
+ <EditForm Model="formModel" OnValidSubmit="HandleSubmit">
+ <DataAnnotationsValidator />
+ <ValidationSummary />
+ <div class="mb-3">
+ <label class="form-label">Nombre</label>
+ <InputText class="form-control" @bind-Value="formModel.Nombre" />
+ </div>
+ <div class="mb-3">
+ <label class="form-label">Email</label>
+ <InputText class="form-control" @bind-Value="formModel.Email" />
+ </div>
+ <div class="mb-3">
+ <label class="form-label">Contraseña (solo si quiere establecer/actualizar)</label>
+ <InputText class="form-control" @bind-Value="formModel.Contraseña" type="password" />
+ </div>
+ <button class="btn btn-primary" type="submit">Guardar</button>
+ <button class="btn btn-secondary ms-2" type="button" @onclick="Cancel">Cancelar</button>
+ </EditForm>
+ </div>
+ </div>
+}
+
+@code {
+ private bool loading = true;
+ private string? errorMessage;
+ private List<UsuarioListItem> usuarios = new();
+ private bool showForm = false;
+ private int editingId =0;
+ private UsuarioFormModel formModel = new();
+ private const string ApiBase = "https://localhost:7162/api/usuarios";
+
+ protected override async Task OnInitializedAsync()
+ {
+ await Load();
+ }
+
+ private async Task Load()
+ {
+ loading = true;
+ errorMessage = null;
+ try
+ {
+ var client = HttpClientFactory.CreateClient("ApiClient");
+ var list = await client.GetFromJsonAsync<List<UsuarioListItem>>(ApiBase);
+ if (list != null) usuarios = list;
+ }
+ catch (Exception ex)
+ {
+ errorMessage = ex.Message;
+ }
+ finally
+ {
+ loading = false;
+ StateHasChanged();
+ }
+ }
+
+ private void ShowCreate()
+ {
+ editingId =0;
+ formModel = new UsuarioFormModel();
+ showForm = true;
+ }
+
+ private async Task Edit(int id)
+ {
+ errorMessage = null;
+ try
+ {
+ var client = HttpClientFactory.CreateClient("ApiClient");
+ var user = await client.GetFromJsonAsync<UsuarioListItem>($"{ApiBase}/{id}");
+ if (user != null)
+ {
+ editingId = user.Id;
+ formModel = new UsuarioFormModel { Nombre = user.Nombre, Email = user.Email };
+ showForm = true;
+ }
+ }
+ catch (Exception ex)
+ {
+ errorMessage = ex.Message;
+ }
+ }
+
+ private async Task Delete(int id)
+ {
+ var confirmed = await JS.InvokeAsync<bool>("confirm", $"Borrar usuario {id}? Esta acción no se puede deshacer.");
+ if (!confirmed) return;
+ try
+ {
+ var client = HttpClientFactory.CreateClient("ApiClient");
+ var res = await client.DeleteAsync($"{ApiBase}/{id}");
+ if (res.IsSuccessStatusCode)
+ {
+ await Load();
+ }
+ else
+ {
+ var txt = await res.Content.ReadAsStringAsync();
+ errorMessage = $"Error borrando: {(int)res.StatusCode} {res.ReasonPhrase} - {txt}";
+ }
+ }
+ catch (Exception ex)
+ {
+ errorMessage = ex.Message;
+ }
+ }
+
+ private void Cancel()
+ {
+ showForm = false;
+ editingId =0;
+ formModel = new UsuarioFormModel();
+ }
+
+ private async Task HandleSubmit()
+ {
+ errorMessage = null;
+ try
+ {
+ var client = HttpClientFactory.CreateClient("ApiClient");
+ if (editingId ==0)
+ {
+ var payload = new { nombre = formModel.Nombre, email = formModel.Email, contraseña = formModel.Contraseña };
+ var res = await client.PostAsJsonAsync(ApiBase, payload);
+ if (res.IsSuccessStatusCode)
+ {
+ showForm = false;
+ await Load();
+ }
+ else
+ {
+ var txt = await res.Content.ReadAsStringAsync();
+ errorMessage = $"Error creando: {(int)res.StatusCode} {res.ReasonPhrase} - {txt}";
+ }
+ }
+ else
+ {
+ var payload = new { nombre = formModel.Nombre, email = formModel.Email, contraseña = formModel.Contraseña };
+ var res = await client.PutAsJsonAsync($"{ApiBase}/{editingId}", payload);
+ if (res.IsSuccessStatusCode)
+ {
+ showForm = false;
+ editingId =0;
+ await Load();
+ }
+ else
+ {
+ var txt = await res.Content.ReadAsStringAsync();
+ errorMessage = $"Error actualizando: {(int)res.StatusCode} {res.ReasonPhrase} - {txt}";
+ }
+ }
+ }
+ catch (Exception ex)
+ {
+ errorMessage = ex.Message;
+ }
+ }
+
+ private class UsuarioListItem
+ {
+ public int Id { get; set; }
+ public string Nombre { get; set; } = string.Empty;
+ public string Email { get; set; } = string.Empty;
+ }
+
+ private class UsuarioFormModel
+ {
+ public string Nombre { get; set; } = string.Empty;
+ public string Email { get; set; } = string.Empty;
+ public string Contraseña { get; set; } = string.Empty;
+ }
+}
