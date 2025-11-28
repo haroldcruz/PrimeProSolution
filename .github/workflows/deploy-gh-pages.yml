@@ -1,8 +1,10 @@
-name: Deploy Blazor WebAssembly to GitHub Pages (official actions)
+name: Deploy Blazor WebAssembly to GitHub Pages
 
 on:
  push:
- branches: [ master ]
+ branches:
+ - master
+ - main
 
 permissions:
  contents: read
@@ -29,14 +31,22 @@ jobs:
  dotnet restore
  dotnet publish PrimePro/PrimePro.csproj -c Release -o ./publish
 
+ - name: Show publish output (diagnostics)
+ run: |
+ echo "Listing publish folder"
+ ls -la ./publish || true
+ echo "Listing publish/wwwroot"
+ ls -la ./publish/wwwroot || true
+
  - name: Fix base href for GitHub Pages and create SPA fallback
  run: |
  REPO_NAME=${GITHUB_REPOSITORY#*/}
  if [ -f ./publish/wwwroot/index.html ]; then
- # Set base href to repository name for project pages
  sed -i "s|<base href=\"/\" />|<base href=\"/${REPO_NAME}/\" />|" ./publish/wwwroot/index.html || true
- # Create404 fallback for SPA routing
  cp ./publish/wwwroot/index.html ./publish/wwwroot/404.html
+ else
+ echo "index.html not found in publish/wwwroot"
+ ls -la ./publish || true
  fi
 
  - name: Upload Pages artifact
